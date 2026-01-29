@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  --void-black: #0a0a0a;
+  --cell-black: #111111;
+  --jailbar-grey: #3a3a3a;
+  --text-grey: #8a8a8a;
+  --text-light: #cccccc;
+  --text-white: #e0e0e0;
+  --danger-red: #dc2626;
+  --danger-red-hover: #b91c1c;
+  --execute-green: #16a34a;
+  --execute-green-hover: #15803d;
+  --accent-dim: #525252;
+}
+
+@theme inline {
+  --color-void-black: var(--void-black);
+  --color-cell-black: var(--cell-black);
+  --color-jailbar-grey: var(--jailbar-grey);
+  --color-text-grey: var(--text-grey);
+  --color-text-light: var(--text-light);
+  --color-text-white: var(--text-white);
+  --color-danger-red: var(--danger-red);
+  --color-danger-red-hover: var(--danger-red-hover);
+  --color-execute-green: var(--execute-green);
+  --color-execute-green-hover: var(--execute-green-hover);
+  --color-accent-dim: var(--accent-dim);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--void-black);
+  color: var(--text-white);
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", Courier, monospace;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--jailbar-grey);
+  border-radius: 3px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseRed {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(220, 38, 38, 0.2);
+  }
+}
+
+@keyframes lockIn {
+  0% {
+    border-color: var(--jailbar-grey);
+  }
+  50% {
+    border-color: var(--danger-red);
+  }
+  100% {
+    border-color: var(--jailbar-grey);
+  }
+}
+
+@keyframes flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes typewriter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-pulse-red {
+  animation: pulseRed 2s infinite;
+}
+
+.animate-lock-in {
+  animation: lockIn 1s ease-out;
+}
+
+.animate-flicker {
+  animation: flicker 3s infinite;
+}
+
+.animate-typewriter {
+  animation: typewriter 0.3s ease-out forwards;
+}
+
+/* Selection styling */
+::selection {
+  background: var(--danger-red);
+  color: white;
+}
