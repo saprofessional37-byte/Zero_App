@@ -1,6 +1,6 @@
 import { AppState } from "./types";
 
-const STORAGE_KEY = "zero-app-state";
+const STORAGE_KEY = "zero-app-state-v2";
 
 const defaultState: AppState = {
   screen: "onboarding",
