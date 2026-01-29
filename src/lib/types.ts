@@ -1,10 +1,15 @@
-export type Capital = "$0" | "$100" | "$500";
-export type TimeAvailable = "<5h" | "10h" | "20h+";
-
 export interface UserProfile {
+  ageBracket: string;
+  locationType: string;
+  employmentStatus: string;
+  capitalAvailable: string;
+  monthlyRunway: string;
+  weeklyHours: string;
+  skillType: string;
+  pastAttempts: string;
   biggestFailure: string;
-  capital: Capital;
-  timeAvailable: TimeAvailable;
+  whyNow: string;
+  commitment: string;
 }
 
 export interface BusinessIdea {

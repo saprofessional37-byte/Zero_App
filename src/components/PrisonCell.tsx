@@ -28,7 +28,7 @@ export default function PrisonCell({
   const [error, setError] = useState("");
 
   function handleGenerate() {
-    const idea = generateIdea(userProfile.capital, userProfile.timeAvailable);
+    const idea = generateIdea(userProfile);
     onGenerateIdea(idea);
     setActiveAction(null);
     setInputText("");

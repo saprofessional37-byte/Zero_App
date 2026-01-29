@@ -1,231 +1,455 @@
 "use client";
 
 import { useState } from "react";
-import { Capital, TimeAvailable, UserProfile } from "@/lib/types";
+import { UserProfile } from "@/lib/types";
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
   onReject: (message: string) => void;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+  risk: number;
+  reject?: boolean;
+}
+
+interface QuestionBase {
+  id: string;
+  question: string;
+  subtext: string;
+}
+
+interface SelectQuestion extends QuestionBase {
+  type: "select";
+  options: SelectOption[];
+}
+
+interface TextQuestion extends QuestionBase {
+  type: "text";
+  placeholder: string;
+  minLength: number;
+}
+
+type Question = SelectQuestion | TextQuestion;
+
+const QUESTIONS: Question[] = [
+  {
+    id: "age_bracket",
+    question: "AGE BRACKET",
+    subtext: "Time is your only non-renewable resource.",
+    type: "select",
+    options: [
+      { value: "18-24", label: "18-24", risk: 0 },
+      { value: "25-34", label: "25-34", risk: 0 },
+      { value: "35-44", label: "35-44", risk: 0 },
+      { value: "45-54", label: "45-54", risk: 1 },
+      { value: "55+", label: "55+", risk: 2 },
+    ],
+  },
+  {
+    id: "location_type",
+    question: "WHERE DO YOU OPERATE?",
+    subtext: "Geography determines opportunity cost.",
+    type: "select",
+    options: [
+      { value: "major_city", label: "Major City (1M+ population)", risk: 0 },
+      { value: "mid_city", label: "Mid-Size City (100K-1M)", risk: 0 },
+      { value: "small_town", label: "Small Town (<100K)", risk: 1 },
+      { value: "rural", label: "Rural / Remote", risk: 1 },
+      { value: "international", label: "Outside US/EU", risk: 1 },
+    ],
+  },
+  {
+    id: "employment_status",
+    question: "CURRENT STATUS",
+    subtext: "Are you running toward something or away from something?",
+    type: "select",
+    options: [
+      { value: "employed_ft", label: "Employed Full-Time", risk: 0 },
+      { value: "employed_pt", label: "Employed Part-Time", risk: 0 },
+      {
+        value: "unemployed_recent",
+        label: "Recently Unemployed (<3 months)",
+        risk: 1,
+      },
+      {
+        value: "unemployed_long",
+        label: "Unemployed (3+ months)",
+        risk: 2,
+      },
+      { value: "student", label: "Student", risk: 0 },
+      {
+        value: "already_founder",
+        label: "Already Running a Business",
+        risk: 0,
+      },
+    ],
+  },
+  {
+    id: "capital_available",
+    question: "CAPITAL YOU CAN BURN",
+    subtext:
+      "Money you can lose without crying. Not savings. Not rent.",
+    type: "select",
+    options: [
+      { value: "0", label: "$0 - I have nothing", risk: 2 },
+      { value: "100", label: "$100 - Coffee money", risk: 1 },
+      { value: "500", label: "$500 - One bad weekend", risk: 0 },
+      { value: "1000", label: "$1,000 - Serious starter", risk: 0 },
+      { value: "5000", label: "$5,000+ - Ready to play", risk: 0 },
+    ],
+  },
+  {
+    id: "monthly_runway",
+    question: "MONTHS OF RUNWAY",
+    subtext:
+      "If all income stopped today, how long before you\u2019re homeless?",
+    type: "select",
+    options: [
+      { value: "0", label: "0 - Already drowning", risk: 3, reject: true },
+      { value: "1-2", label: "1-2 months", risk: 2 },
+      { value: "3-6", label: "3-6 months", risk: 1 },
+      { value: "6-12", label: "6-12 months", risk: 0 },
+      { value: "12+", label: "12+ months", risk: 0 },
+    ],
+  },
+  {
+    id: "weekly_hours",
+    question: "HOURS PER WEEK",
+    subtext:
+      'Real hours. Not "I\'ll find time." Actual blocks you control.',
+    type: "select",
+    options: [
+      { value: "<5", label: "Less than 5 hours", risk: 2 },
+      { value: "5-10", label: "5-10 hours", risk: 1 },
+      { value: "10-20", label: "10-20 hours", risk: 0 },
+      { value: "20-40", label: "20-40 hours", risk: 0 },
+      { value: "40+", label: "40+ hours (Full send)", risk: 0 },
+    ],
+  },
+  {
+    id: "skill_type",
+    question: "PRIMARY SKILL",
+    subtext: "What can you sell tomorrow without learning anything new?",
+    type: "select",
+    options: [
+      {
+        value: "technical",
+        label: "Technical (Code, Design, Engineering)",
+        risk: 0,
+      },
+      { value: "sales", label: "Sales / Persuasion", risk: 0 },
+      { value: "operations", label: "Operations / Logistics", risk: 0 },
+      {
+        value: "creative",
+        label: "Creative (Writing, Video, Art)",
+        risk: 0,
+      },
+      {
+        value: "trade",
+        label: "Trade Skill (Plumbing, Electric, etc.)",
+        risk: 0,
+      },
+      { value: "none", label: "Nothing marketable yet", risk: 2 },
+    ],
+  },
+  {
+    id: "past_attempts",
+    question: "PREVIOUS ATTEMPTS",
+    subtext: "How many businesses have you started (and killed)?",
+    type: "select",
+    options: [
+      { value: "0", label: "0 - Complete virgin", risk: 1 },
+      { value: "1", label: "1 - One scar", risk: 0 },
+      { value: "2-3", label: "2-3 - Battle-tested", risk: 0 },
+      {
+        value: "4+",
+        label: "4+ - Serial starter (or serial quitter?)",
+        risk: 1,
+      },
+    ],
+  },
+  {
+    id: "biggest_failure",
+    question: "DESCRIBE YOUR BIGGEST FAILURE",
+    subtext:
+      "In one sentence. If you say \"I haven't failed\" you're lying or boring.",
+    type: "text",
+    placeholder: "I lost $X doing Y because Z...",
+    minLength: 20,
+  },
+  {
+    id: "why_now",
+    question: "WHY NOW?",
+    subtext: "What changed? Why not last year? Why not next year?",
+    type: "text",
+    placeholder: "The real reason, not the motivational poster version...",
+    minLength: 15,
+  },
+  {
+    id: "commitment",
+    question: "FINAL QUESTION",
+    subtext:
+      'If I give you ONE idea, will you execute it this week\u2014or will you "research" it for 3 months?',
+    type: "select",
+    options: [
+      { value: "execute", label: "Execute. No excuses.", risk: 0 },
+      {
+        value: "probably",
+        label: "Probably... if it feels right",
+        risk: 2,
+      },
+      {
+        value: "research",
+        label: "I need to validate first",
+        risk: 3,
+        reject: true,
+      },
+    ],
+  },
+];
+
+type AnswerMap = Record<string, SelectOption | string>;
+
+function getRejectReason(questionId: string): string {
+  const reasons: Record<string, string> = {
+    monthly_runway:
+      "You have 0 months of runway. You don't need a business idea\u2014you need a job. Come back when you're not one paycheck from disaster.",
+    commitment:
+      'You want to "validate" and "research." Translation: you want permission to procrastinate. This app is for executors, not researchers. Goodbye.',
+  };
+  return reasons[questionId] || "You are not ready. Come back when you are.";
+}
+
+function buildProfile(answers: AnswerMap): UserProfile {
+  const val = (id: string): string => {
+    const a = answers[id];
+    if (typeof a === "string") return a;
+    return a?.value ?? "";
+  };
+  return {
+    ageBracket: val("age_bracket"),
+    locationType: val("location_type"),
+    employmentStatus: val("employment_status"),
+    capitalAvailable: val("capital_available"),
+    monthlyRunway: val("monthly_runway"),
+    weeklyHours: val("weekly_hours"),
+    skillType: val("skill_type"),
+    pastAttempts: val("past_attempts"),
+    biggestFailure: val("biggest_failure"),
+    whyNow: val("why_now"),
+    commitment: val("commitment"),
+  };
+}
+
 export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
-  const [step, setStep] = useState(0);
-  const [biggestFailure, setBiggestFailure] = useState("");
-  const [capital, setCapital] = useState<Capital | null>(null);
-  const [timeAvailable, setTimeAvailable] = useState<TimeAvailable | null>(
-    null
-  );
-  const [error, setError] = useState("");
+  const [currentStep, setCurrentStep] = useState(0);
+  const [answers, setAnswers] = useState<AnswerMap>({});
+  const [textInput, setTextInput] = useState("");
+  const [admitted, setAdmitted] = useState(false);
 
-  function handleNext() {
-    setError("");
+  function evaluateAnswers(finalAnswers: AnswerMap) {
+    let totalRisk = 0;
 
-    if (step === 0) {
-      // Validate failure response - must be honest (at least 20 chars)
-      if (biggestFailure.trim().length < 20) {
-        setError(
-          "That is not an answer. Be honest. What actually happened? Write at least a real sentence."
-        );
-        return;
+    Object.values(finalAnswers).forEach((answer) => {
+      if (typeof answer === "object" && answer.risk) {
+        totalRisk += answer.risk;
       }
-      setStep(1);
-    } else if (step === 1) {
-      if (!capital) {
-        setError("Pick one. There are no wrong answers. Only honest ones.");
-        return;
-      }
-      setStep(2);
-    } else if (step === 2) {
-      if (!timeAvailable) {
-        setError("How much time do you actually have? Not hope. Reality.");
-        return;
-      }
+    });
 
-      // REJECTION LOGIC
-      if (capital === "$0" && timeAvailable === "<5h") {
-        onReject(
-          "REJECTED.\n\nYou have no capital and less than 5 hours a week. You are not ready to build a business. You are ready to get a second job.\n\nGo earn $500 first. Then come back. This app does not reward delusion."
-        );
-        return;
-      }
+    const capital =
+      typeof finalAnswers.capital_available === "object"
+        ? finalAnswers.capital_available.value
+        : "";
+    const hours =
+      typeof finalAnswers.weekly_hours === "object"
+        ? finalAnswers.weekly_hours.value
+        : "";
+    const skill =
+      typeof finalAnswers.skill_type === "object"
+        ? finalAnswers.skill_type.value
+        : "";
 
-      if (biggestFailure.trim().length < 30 && capital === "$0") {
-        onReject(
-          "REJECTED.\n\nYour failure was too shallow and your wallet is empty. That combination tells me you have not been tested yet.\n\nGo fail at something real first. Then come back with scars and a story."
-        );
-        return;
-      }
+    if (capital === "0" && hours === "<5") {
+      onReject(
+        "$0 capital AND less than 5 hours per week? You're not starting a business\u2014you're daydreaming. Come back with either money or time."
+      );
+      return;
+    }
 
-      // Accept
-      onComplete({
-        biggestFailure: biggestFailure.trim(),
-        capital: capital!,
-        timeAvailable: timeAvailable!,
-      });
+    if (skill === "none" && capital === "0") {
+      onReject(
+        "No money and no marketable skill. Start by learning something valuable. Try: copywriting, basic web dev, or sales. Return in 90 days."
+      );
+      return;
+    }
+
+    if (totalRisk > 8) {
+      onReject(
+        "Your risk profile is too high. Too many red flags in your answers. Stabilize your situation first, then come back."
+      );
+      return;
+    }
+
+    setAdmitted(true);
+  }
+
+  function handleSelect(option: SelectOption) {
+    const question = QUESTIONS[currentStep];
+
+    if (option.reject) {
+      onReject(getRejectReason(question.id));
+      return;
+    }
+
+    const updated = { ...answers, [question.id]: option };
+    setAnswers(updated);
+
+    if (currentStep < QUESTIONS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      evaluateAnswers(updated);
     }
   }
 
+  function handleTextSubmit() {
+    const question = QUESTIONS[currentStep] as TextQuestion;
+    if (textInput.length < question.minLength) return;
+
+    const updated = { ...answers, [question.id]: textInput };
+    setAnswers(updated);
+    setTextInput("");
+
+    if (currentStep < QUESTIONS.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      evaluateAnswers(updated);
+    }
+  }
+
+  // ADMITTED screen
+  if (admitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-lg w-full border-2 border-jailbar-grey p-8 animate-fade-in">
+          <div className="text-execute-green text-xs mb-4 tracking-widest">
+            // ACCESS GRANTED
+          </div>
+          <h1 className="text-2xl text-execute-green font-bold mb-6 tracking-wider">
+            ADMITTED
+          </h1>
+          <p className="text-text-light leading-relaxed mb-4">
+            You passed. Barely.
+          </p>
+          <p className="text-text-grey text-sm mb-8">
+            Remember: You asked for this. No complaining. No pivoting every
+            week. One idea. Execute or murder. Those are your only options.
+          </p>
+          <div className="border-t border-jailbar-grey pt-6">
+            <button
+              onClick={() => onComplete(buildProfile(answers))}
+              className="w-full p-4 border border-jailbar-grey bg-cell-black text-text-white uppercase tracking-widest text-sm font-bold hover:border-text-grey hover:bg-jailbar-grey/20 transition-all"
+            >
+              ENTER THE CELL &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const question = QUESTIONS[currentStep];
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      {/* Header */}
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-widest text-text-white mb-2">
-          ZERO
-        </h1>
-        <p className="text-text-grey text-sm tracking-wide">
-          THE IMMUNE SYSTEM
-        </p>
-        <div className="mt-4 w-16 h-px bg-jailbar-grey mx-auto" />
-      </div>
-
-      {/* Progress */}
-      <div className="flex gap-2 mb-10">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className={`w-8 h-1 ${
-              i <= step ? "bg-danger-red" : "bg-jailbar-grey"
-            } transition-colors duration-300`}
-          />
-        ))}
-      </div>
-
-      {/* Questions */}
-      <div className="w-full max-w-lg animate-fade-in" key={step}>
-        {step === 0 && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-text-light text-sm tracking-wider uppercase mb-1">
-                Question 01
-              </label>
-              <h2 className="text-2xl font-bold text-text-white">
-                What is your biggest failure?
-              </h2>
-              <p className="text-text-grey text-sm mt-2">
-                Not a humble brag. A real failure. The one that still stings.
-              </p>
-            </div>
-            <textarea
-              value={biggestFailure}
-              onChange={(e) => setBiggestFailure(e.target.value)}
-              placeholder="Be honest. This is between you and the void."
-              className="w-full h-32 bg-cell-black border border-jailbar-grey text-text-white p-4 rounded-none resize-none focus:outline-none focus:border-danger-red transition-colors placeholder:text-accent-dim"
+    <div className="min-h-screen p-4">
+      <div className="max-w-2xl mx-auto pt-8">
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex justify-between text-xs text-text-grey mb-2">
+            <span>
+              SCREENING{" "}
+              {String(currentStep + 1).padStart(2, "0")}/
+              {String(QUESTIONS.length).padStart(2, "0")}
+            </span>
+            <span>
+              {Math.round(((currentStep + 1) / QUESTIONS.length) * 100)}%
+              COMPLETE
+            </span>
+          </div>
+          <div className="h-1 bg-cell-black rounded">
+            <div
+              className="h-full bg-jailbar-grey rounded transition-all duration-300"
+              style={{
+                width: `${((currentStep + 1) / QUESTIONS.length) * 100}%`,
+              }}
             />
           </div>
-        )}
+        </div>
 
-        {step === 1 && (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-text-light text-sm tracking-wider uppercase mb-1">
-                Question 02
-              </label>
-              <h2 className="text-2xl font-bold text-text-white">
-                How much capital do you have right now?
-              </h2>
-              <p className="text-text-grey text-sm mt-2">
-                Not savings. Not credit. Cash you can light on fire and not cry.
-              </p>
-            </div>
+        {/* Question */}
+        <div className="border border-jailbar-grey p-6 mb-6 animate-fade-in" key={currentStep}>
+          <div className="text-text-grey text-xs mb-4 tracking-widest">
+            // INTERROGATION
+          </div>
+          <h2 className="text-xl font-bold text-text-white mb-2">
+            {question.question}
+          </h2>
+          <p className="text-text-grey text-sm mb-8">{question.subtext}</p>
+
+          {question.type === "select" && (
             <div className="space-y-3">
-              {(["$0", "$100", "$500"] as Capital[]).map((option) => (
+              {question.options.map((option, idx) => (
                 <button
-                  key={option}
-                  onClick={() => setCapital(option)}
-                  className={`w-full p-4 border text-left transition-all ${
-                    capital === option
-                      ? "border-danger-red bg-danger-red/10 text-text-white"
-                      : "border-jailbar-grey bg-cell-black text-text-grey hover:border-text-grey hover:text-text-light"
-                  }`}
+                  key={idx}
+                  onClick={() => handleSelect(option)}
+                  className="w-full text-left p-4 border border-jailbar-grey hover:border-text-grey hover:bg-cell-black transition-all group"
                 >
-                  <span className="font-bold">{option}</span>
-                  {option === "$0" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Broke. Service businesses only.
-                    </span>
-                  )}
-                  {option === "$100" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Enough for tools and a test.
-                    </span>
-                  )}
-                  {option === "$500" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Real money. More options.
-                    </span>
-                  )}
+                  <span className="text-text-grey mr-3">
+                    [{String.fromCharCode(65 + idx)}]
+                  </span>
+                  <span className="text-text-light group-hover:text-text-white">
+                    {option.label}
+                  </span>
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {step === 2 && (
-          <div className="space-y-6">
+          {question.type === "text" && (
             <div>
-              <label className="block text-text-light text-sm tracking-wider uppercase mb-1">
-                Question 03
-              </label>
-              <h2 className="text-2xl font-bold text-text-white">
-                How many hours per week can you commit?
-              </h2>
-              <p className="text-text-grey text-sm mt-2">
-                After your job. After your obligations. Real hours.
-              </p>
-            </div>
-            <div className="space-y-3">
-              {(["<5h", "10h", "20h+"] as TimeAvailable[]).map((option) => (
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder={question.placeholder}
+                className="w-full bg-void-black border border-jailbar-grey p-4 text-text-light focus:border-text-grey focus:outline-none resize-none h-32 placeholder:text-accent-dim"
+              />
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-xs text-text-grey">
+                  {textInput.length < question.minLength
+                    ? `Min ${question.minLength} characters required`
+                    : "Ready"}
+                </span>
                 <button
-                  key={option}
-                  onClick={() => setTimeAvailable(option)}
-                  className={`w-full p-4 border text-left transition-all ${
-                    timeAvailable === option
-                      ? "border-danger-red bg-danger-red/10 text-text-white"
-                      : "border-jailbar-grey bg-cell-black text-text-grey hover:border-text-grey hover:text-text-light"
-                  }`}
+                  onClick={handleTextSubmit}
+                  disabled={textInput.length < question.minLength}
+                  className="px-6 py-2 border border-jailbar-grey text-text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cell-black transition-all uppercase tracking-wider text-sm"
                 >
-                  <span className="font-bold">{option}</span>
-                  {option === "<5h" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Barely enough. Better be focused.
-                    </span>
-                  )}
-                  {option === "10h" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Workable. No room for waste.
-                    </span>
-                  )}
-                  {option === "20h+" && (
-                    <span className="block text-xs mt-1 text-text-grey">
-                      Serious commitment. No excuses left.
-                    </span>
-                  )}
+                  SUBMIT &rarr;
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Error */}
-        {error && (
-          <p className="text-danger-red text-sm mt-4 animate-fade-in">
-            {error}
-          </p>
-        )}
-
-        {/* Next Button */}
-        <button
-          onClick={handleNext}
-          className="mt-8 w-full p-4 border border-jailbar-grey bg-cell-black text-text-white uppercase tracking-widest hover:border-text-grey hover:bg-jailbar-grey/20 transition-all text-sm font-bold"
-        >
-          {step < 2 ? "NEXT" : "ENTER"}
-        </button>
+        {/* Footer */}
+        <div className="text-center text-accent-dim text-xs tracking-wide">
+          ZERO does not store your data. We don&apos;t care about your data.
+          <br />
+          We care about whether you execute.
+        </div>
       </div>
-
-      {/* Footer */}
-      <p className="mt-12 text-accent-dim text-xs tracking-wide">
-        THIS IS NOT A GAME. THIS IS A FILTER.
-      </p>
     </div>
   );
 }

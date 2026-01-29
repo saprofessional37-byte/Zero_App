@@ -1,4 +1,4 @@
-import { BusinessIdea, Capital, TimeAvailable } from "./types";
+import { BusinessIdea, UserProfile } from "./types";
 
 const IDEAS: BusinessIdea[] = [
   // SERVICE IDEAS ($0 capital)
@@ -170,24 +170,25 @@ const IDEAS: BusinessIdea[] = [
   },
 ];
 
-export function generateIdea(
-  capital: Capital,
-  timeAvailable: TimeAvailable
-): BusinessIdea {
+export function generateIdea(profile: UserProfile): BusinessIdea {
+  const capital = profile.capitalAvailable;
+  const hours = profile.weeklyHours;
   let pool: BusinessIdea[];
 
-  if (capital === "$0") {
+  // Filter by capital
+  if (capital === "0") {
     pool = IDEAS.filter((i) => i.category === "service");
-  } else if (capital === "$100") {
+  } else if (capital === "100") {
     pool = IDEAS.filter(
       (i) => i.category === "service" || i.category === "low-cost"
     );
   } else {
+    // $500, $1000, $5000 - all ideas available
     pool = IDEAS;
   }
 
-  // For limited time, prefer simpler service-based ideas
-  if (timeAvailable === "<5h") {
+  // For very limited time, prefer simpler service-based ideas
+  if (hours === "<5") {
     const serviceOnly = pool.filter((i) => i.category === "service");
     if (serviceOnly.length > 0) pool = serviceOnly;
   }
