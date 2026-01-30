@@ -1,0 +1,49 @@
+I am a complete beginner building a Next.js 16 App (App Router). I need to replace my current LocalStorage state with Supabase (Database) and Clerk (Authentication).
+
+The two services must be integrated: Clerk handles the login, and Supabase handles the data, using Clerk's JWT token for Row Level Security (RLS).
+
+Here is my current structure:
+- src/lib/types.ts (Defines UserProfile and AppState)
+- src/lib/store.ts (Currently uses localStorage - needs to be replaced)
+
+Please perform the following actions Step-by-Step. Stop after each step and ask me to confirm.
+
+---
+
+STEP 1: CLERK INSTALLATION (Strict Adherence to Latest Docs)
+- Install `@clerk/nextjs`.
+- Create `src/middleware.ts` (NOT proxy.ts) using `clerkMiddleware()` from `@clerk/nextjs/server`.
+- Wrap the app in `src/app/layout.tsx` with `<ClerkProvider>`.
+- Configure the middleware matcher exactly as per standard Next.js docs: `['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)']`.
+- Do NOT use `authMiddleware` or `_app.tsx`.
+
+STEP 2: SUPABASE INSTALLATION & SCHEMA
+- Install `@supabase/supabase-js`.
+- Create a SQL script for me to run in the Supabase Dashboard SQL Editor.
+- The SQL must:
+  1. Create a `users` table mirroring my `UserProfile` interface (id, age_bracket, location_type, etc.).
+  2. The `id` column must be of type `text` and serve as the Primary Key (this will store the Clerk User ID).
+  3. Enable Row Level Security (RLS).
+  4. Create a Policy that allows users to SELECT, INSERT, and UPDATE rows only where `id = auth.uid()` (Note: we will configure the custom claim later).
+
+STEP 3: INTEGRATION CLIENT (The Bridge)
+- Create a file `src/lib/supabaseClient.ts`.
+- This file should export a function `createSupabaseClient(authToken: string)`.
+- It initializes the Supabase client using the `global` Supabase URL and Anon Key, but adds the `global: { headers: { Authorization: 'Bearer ' + authToken } }` configuration.
+- This allows us to pass the Clerk session token to Supabase.
+
+STEP 4: REWRITE THE STORE (The Brain Transplant)
+- Rewrite `src/lib/store.ts`.
+- Instead of `loadState` and `saveState`, create a custom hook `usePrisonState`.
+- Inside the hook:
+  1. Use `useAuth()` from `@clerk/nextjs` to get the `getToken` function.
+  2. Use `useEffect` to fetch data:
+     - Call `await getToken({ template: 'supabase' })`.
+     - Pass that token to `createSupabaseClient`.
+     - Select `*` from `users` where `id` matches the user.
+  3. Return the state and a `saveToCloud` function that updates the Supabase row.
+
+STEP 5: INTEGRATION INSTRUCTION
+- Explain clearly how I need to go to the Clerk Dashboard -> JWT Templates to create a template named 'supabase' so Step 4 works.
+
+Please start with STEP 1.
