@@ -9,9 +9,18 @@ export async function POST(req: Request) {
   try {
     const { answer } = await req.json();
 
-    const systemPrompt = `You are a strict application reviewer. The user was asked to describe their biggest failure. Analyze the text.
-If the text is gibberish, random keys, or clearly low-effort lazy typing (e.g. 'asdf' or 'I dont know'), return 'REJECT'.
-If it is a coherent sentence, return 'PASS'.
+    const systemPrompt = `You are a strict application reviewer. The user was asked to describe their biggest failure or why they want to start a business now.
+Analyze the text for quality and authenticity.
+REJECT if:
+- It is gibberish or random letters (e.g., 'asdf', 'qwerty').
+- It is a collection of random, unrelated words that don't form a coherent thought (e.g., 'apple sky run blue').
+- It is a low-effort, lazy answer (e.g., 'I dont know', 'nothing', 'test').
+- It is clearly a bypass attempt using filler words.
+
+PASS only if:
+- It is a coherent sentence or phrase that makes sense in the context of a business failure or motivation.
+- It shows at least a minimum level of thought.
+
 Output ONLY the word 'PASS' or 'REJECT'.`;
 
     const chatCompletion = await groq.chat.completions.create({
@@ -19,7 +28,7 @@ Output ONLY the word 'PASS' or 'REJECT'.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: answer },
       ],
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-specdec",
       temperature: 0.1,
       max_tokens: 10,
     });
