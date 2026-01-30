@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     // 3. Call Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: conversation,
-      model: "llama3-70b-8192", // High intelligence model
+      model: "llama-3.3-70b-specdec", // High intelligence model
       temperature: 0.8, // Slightly higher creativity for insults
       max_tokens: 150, // Keep it short
     });
