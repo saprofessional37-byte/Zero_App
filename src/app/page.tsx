@@ -2,29 +2,25 @@
 
 import { useState, useEffect } from "react";
 import { AppState, BusinessIdea, ChatMessage, UserProfile } from "@/lib/types";
-import { loadState, saveState, resetState } from "@/lib/store";
+import { usePrisonState } from "@/lib/store";
 import Onboarding from "@/components/Onboarding";
 import RejectionScreen from "@/components/RejectionScreen";
 import PrisonCell from "@/components/PrisonCell";
 import WardenChat from "@/components/WardenChat";
 
 export default function Home() {
-  const [state, setState] = useState<AppState | null>(null);
+  const { state: cloudState, loading, saveToCloud, refresh } = usePrisonState();
+  const [localState, setLocalState] = useState<AppState | null>(null);
 
-  // Load state from localStorage on mount
+  // Sync cloud state to local state
   useEffect(() => {
-    setState(loadState());
-  }, []);
-
-  // Persist state changes
-  useEffect(() => {
-    if (state) {
-      saveState(state);
+    if (!loading && cloudState) {
+      setLocalState(cloudState);
     }
-  }, [state]);
+  }, [cloudState, loading]);
 
-  // Loading state (before hydration)
-  if (!state) {
+  // Loading state (before hydration or while cloud fetching)
+  if (loading || !localState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-text-grey text-sm tracking-widest animate-flicker">
@@ -35,8 +31,10 @@ export default function Home() {
   }
 
   // Handle onboarding completion
-  function handleOnboardingComplete(profile: UserProfile) {
-    setState((prev) =>
+  async function handleOnboardingComplete(profile: UserProfile) {
+    await saveToCloud(profile);
+    // State will be updated by cloud sync, but for immediate UI feedback:
+    setLocalState((prev) =>
       prev
         ? {
             ...prev,
@@ -50,7 +48,7 @@ export default function Home() {
 
   // Handle rejection
   function handleRejection(message: string) {
-    setState((prev) =>
+    setLocalState((prev) =>
       prev
         ? {
             ...prev,
@@ -63,13 +61,14 @@ export default function Home() {
 
   // Handle reset (try again after rejection)
   function handleReset() {
-    resetState();
-    setState(loadState());
+    // For now, since we only store userProfile in cloud, 
+    // a reset just reloads the current cloud state
+    refresh();
   }
 
   // Handle idea generation
   function handleGenerateIdea(idea: BusinessIdea) {
-    setState((prev) =>
+    setLocalState((prev) =>
       prev
         ? {
             ...prev,
@@ -83,7 +82,7 @@ export default function Home() {
 
   // Handle execute
   function handleExecute(plan: string) {
-    setState((prev) =>
+    setLocalState((prev) =>
       prev
         ? {
             ...prev,
@@ -97,7 +96,7 @@ export default function Home() {
 
   // Handle murder
   function handleMurder(_reason: string) {
-    setState((prev) =>
+    setLocalState((prev) =>
       prev
         ? {
             ...prev,
@@ -111,31 +110,31 @@ export default function Home() {
 
   // Navigate to warden chat
   function handleTalkToWarden() {
-    setState((prev) => (prev ? { ...prev, screen: "warden" } : prev));
+    setLocalState((prev) => (prev ? { ...prev, screen: "warden" } : prev));
   }
 
   // Navigate back from warden chat
   function handleBackFromWarden() {
-    setState((prev) => (prev ? { ...prev, screen: "prison" } : prev));
+    setLocalState((prev) => (prev ? { ...prev, screen: "prison" } : prev));
   }
 
   // Update chat messages
   function handleChatMessages(messages: ChatMessage[]) {
-    setState((prev) => (prev ? { ...prev, chatMessages: messages } : prev));
+    setLocalState((prev) => (prev ? { ...prev, chatMessages: messages } : prev));
   }
 
   // Rejection screen
-  if (state.rejected) {
+  if (localState.rejected) {
     return (
       <RejectionScreen
-        message={state.rejectionMessage}
+        message={localState.rejectionMessage}
         onReset={handleReset}
       />
     );
   }
 
   // Onboarding
-  if (!state.onboardingComplete) {
+  if (!localState.onboardingComplete) {
     return (
       <Onboarding
         onComplete={handleOnboardingComplete}
@@ -145,11 +144,11 @@ export default function Home() {
   }
 
   // Warden Chat
-  if (state.screen === "warden" && state.currentIdea) {
+  if (localState.screen === "warden" && localState.currentIdea) {
     return (
       <WardenChat
-        idea={state.currentIdea}
-        messages={state.chatMessages}
+        idea={localState.currentIdea}
+        messages={localState.chatMessages}
         onSendMessage={handleChatMessages}
         onBack={handleBackFromWarden}
       />
@@ -159,8 +158,8 @@ export default function Home() {
   // Prison Cell (main dashboard)
   return (
     <PrisonCell
-      userProfile={state.userProfile!}
-      currentIdea={state.currentIdea}
+      userProfile={localState.userProfile!}
+      currentIdea={localState.currentIdea}
       onGenerateIdea={handleGenerateIdea}
       onExecute={handleExecute}
       onMurder={handleMurder}
