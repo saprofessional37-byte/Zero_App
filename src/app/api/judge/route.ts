@@ -28,7 +28,7 @@ Output ONLY the word 'PASS' or 'REJECT'.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: answer },
       ],
-      model: "llama-3.3-70b-specdec",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.1,
       max_tokens: 10,
     });
