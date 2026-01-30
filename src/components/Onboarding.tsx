@@ -105,7 +105,7 @@ const QUESTIONS: Question[] = [
     id: "monthly_runway",
     question: "MONTHS OF RUNWAY",
     subtext:
-      "If all income stopped today, how long before you\u2019re homeless?",
+      "If all income stopped today, how long before you’re homeless?",
     type: "select",
     options: [
       { value: "0", label: "0 - Already drowning", risk: 3, reject: true },
@@ -192,7 +192,7 @@ const QUESTIONS: Question[] = [
     id: "commitment",
     question: "FINAL QUESTION",
     subtext:
-      'If I give you ONE idea, will you execute it this week\u2014or will you "research" it for 3 months?',
+      'If I give you ONE idea, will you execute it this week—or will you "research" it for 3 months?',
     type: "select",
     options: [
       { value: "execute", label: "Execute. No excuses.", risk: 0 },
@@ -216,7 +216,7 @@ type AnswerMap = Record<string, SelectOption | string>;
 function getRejectReason(questionId: string): string {
   const reasons: Record<string, string> = {
     monthly_runway:
-      "You have 0 months of runway. You don't need a business idea\u2014you need a job. Come back when you're not one paycheck from disaster.",
+      "You have 0 months of runway. You don't need a business idea—you need a job. Come back when you're not one paycheck from disaster.",
     commitment:
       'You want to "validate" and "research." Translation: you want permission to procrastinate. This app is for executors, not researchers. Goodbye.',
   };
@@ -249,6 +249,8 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [textInput, setTextInput] = useState("");
   const [admitted, setAdmitted] = useState(false);
+  const [isJudging, setIsJudging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function evaluateAnswers(finalAnswers: AnswerMap) {
     let totalRisk = 0;
@@ -274,7 +276,7 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
 
     if (capital === "0" && hours === "<5") {
       onReject(
-        "$0 capital AND less than 5 hours per week? You're not starting a business\u2014you're daydreaming. Come back with either money or time."
+        "$0 capital AND less than 5 hours per week? You're not starting a business—you're daydreaming. Come back with either money or time."
       );
       return;
     }
@@ -314,9 +316,32 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
     }
   }
 
-  function handleTextSubmit() {
+  async function handleTextSubmit() {
     const question = QUESTIONS[currentStep] as TextQuestion;
     if (textInput.length < question.minLength) return;
+
+    if (question.id === "biggest_failure" || question.id === "why_now") {
+      setIsJudging(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/judge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer: textInput }),
+        });
+        const data = await response.json();
+        
+        if (data.verdict === 'REJECT') {
+          setError("That is not a real answer. Try again.");
+          setIsJudging(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Judging failed:", err);
+      } finally {
+        setIsJudging(false);
+      }
+    }
 
     const updated = { ...answers, [question.id]: textInput };
     setAnswers(updated);
@@ -421,22 +446,29 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
             <div>
               <textarea
                 value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
+                onChange={(e) => {
+                  setTextInput(e.target.value);
+                  setError(null);
+                }}
                 placeholder={question.placeholder}
-                className="w-full bg-void-black border border-jailbar-grey p-4 text-text-light focus:border-text-grey focus:outline-none resize-none h-32 placeholder:text-accent-dim"
+                disabled={isJudging}
+                className="w-full bg-void-black border border-jailbar-grey p-4 text-text-light focus:border-text-grey focus:outline-none resize-none h-32 placeholder:text-accent-dim disabled:opacity-50"
               />
               <div className="flex justify-between items-center mt-4">
-                <span className="text-xs text-text-grey">
-                  {textInput.length < question.minLength
-                    ? `Min ${question.minLength} characters required`
-                    : "Ready"}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs text-text-grey">
+                    {textInput.length < question.minLength
+                      ? `Min ${question.minLength} characters required`
+                      : "Ready"}
+                  </span>
+                  {error && <span className="text-xs text-danger-red mt-1">{error}</span>}
+                </div>
                 <button
                   onClick={handleTextSubmit}
-                  disabled={textInput.length < question.minLength}
-                  className="px-6 py-2 border border-jailbar-grey text-text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cell-black transition-all uppercase tracking-wider text-sm"
+                  disabled={textInput.length < question.minLength || isJudging}
+                  className="px-6 py-2 border border-jailbar-grey text-text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-cell-black transition-all uppercase tracking-wider text-sm min-w-[120px]"
                 >
-                  SUBMIT &rarr;
+                  {isJudging ? "JUDGING..." : "SUBMIT \u2192"}
                 </button>
               </div>
             </div>
