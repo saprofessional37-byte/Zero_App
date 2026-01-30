@@ -10,34 +10,7 @@ import WardenChat from "@/components/WardenChat";
 
 export default function Home() {
   const { state: cloudState, loading, saveToCloud, refresh } = usePrisonState();
-  const [localState, setLocalState] = useState<AppState | null>({
-    screen: "warden",
-    onboardingComplete: true,
-    rejected: false,
-    rejectionMessage: "",
-    userProfile: {
-      ageBracket: "35-44",
-      locationType: "Urban",
-      employmentStatus: "Full-time",
-      capitalAvailable: "$10,000",
-      monthlyRunway: "6 months",
-      weeklyHours: "20 hours",
-      skillType: "Technical",
-      pastAttempts: "2",
-      biggestFailure: "Previous startup failed",
-      whyNow: "Ready to go again",
-      commitment: "High",
-    },
-    currentIdea: {
-      id: "test-idea",
-      title: "Test Business Idea",
-      description: "A revolutionary way to sell air to people who already have air.",
-      firstStep: "Find air",
-      category: "service",
-    },
-    executionPlan: null,
-    chatMessages: [],
-  });
+  const [localState, setLocalState] = useState<AppState | null>(null);
 
   // Sync cloud state to local state
   useEffect(() => {
@@ -59,8 +32,7 @@ export default function Home() {
 
   // Handle onboarding completion
   async function handleOnboardingComplete(profile: UserProfile) {
-    await saveToCloud(profile);
-    // State will be updated by cloud sync, but for immediate UI feedback:
+    // Optimistically update local state to prevent refresh/loss
     setLocalState((prev) =>
       prev
         ? {
@@ -71,6 +43,9 @@ export default function Home() {
           }
         : prev
     );
+    
+    // Save to cloud in background
+    await saveToCloud(profile);
   }
 
   // Handle rejection
