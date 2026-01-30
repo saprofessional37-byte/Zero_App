@@ -9,17 +9,16 @@ export async function POST(req: Request) {
   try {
     const { answer } = await req.json();
 
-    const systemPrompt = `You are a strict application reviewer. The user was asked to describe their biggest failure or why they want to start a business now.
+    const systemPrompt = `You are an application reviewer. The user was asked to describe their biggest failure or why they want to start a business now.
 Analyze the text for quality and authenticity.
-REJECT if:
-- It is gibberish or random letters (e.g., 'asdf', 'qwerty').
-- It is a collection of random, unrelated words that don't form a coherent thought (e.g., 'apple sky run blue').
-- It is a low-effort, lazy answer (e.g., 'I dont know', 'nothing', 'test').
-- It is clearly a bypass attempt using filler words.
 
-PASS only if:
-- It is a coherent sentence or phrase that makes sense in the context of a business failure or motivation.
-- It shows at least a minimum level of thought.
+REJECT ONLY if:
+- It is obvious gibberish or random character spam (e.g., 'asdfasdf', 'qwerty', 'zzzzzzz').
+- It is a completely nonsensical string of random words that clearly has no meaning.
+
+PASS if:
+- It is a coherent sentence or phrase, even if short.
+- It sounds like a real person answering the question.
 
 Output ONLY the word 'PASS' or 'REJECT'.`;
 
