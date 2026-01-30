@@ -149,6 +149,7 @@ export default function Home() {
       <WardenChat
         idea={localState.currentIdea}
         messages={localState.chatMessages}
+        userProfile={localState.userProfile!}
         onSendMessage={handleChatMessages}
         onBack={handleBackFromWarden}
       />

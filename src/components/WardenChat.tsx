@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { BusinessIdea, ChatMessage } from "@/lib/types";
-import { generateMikeResponse, MIKE_INTRO } from "@/lib/mike";
+import { BusinessIdea, ChatMessage, UserProfile } from "@/lib/types";
+import { MIKE_INTRO } from "@/lib/mike";
+import { useAuth } from "@clerk/nextjs";
 
 interface WardenChatProps {
   idea: BusinessIdea;
   messages: ChatMessage[];
+  userProfile: UserProfile;
   onSendMessage: (messages: ChatMessage[]) => void;
   onBack: () => void;
 }
@@ -14,6 +16,7 @@ interface WardenChatProps {
 export default function WardenChat({
   idea,
   messages,
+  userProfile,
   onSendMessage,
   onBack,
 }: WardenChatProps) {
@@ -44,7 +47,7 @@ export default function WardenChat({
     inputRef.current?.focus();
   }, []);
 
-  function handleSend() {
+  async function handleSend() {
     if (!input.trim() || isTyping) return;
 
     const userMessage: ChatMessage = {
@@ -58,18 +61,41 @@ export default function WardenChat({
     setInput("");
     setIsTyping(true);
 
-    // Simulate Mike thinking (0.5-1.5s delay for realism)
-    const delay = 500 + Math.random() * 1000;
-    setTimeout(() => {
-      const mikeResponse = generateMikeResponse(input.trim(), idea, messages);
+    try {
+      const response = await fetch('/api/warden', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          userProfile,
+          currentIdea: idea,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch Mike\'s response');
+      }
+
+      const data = await response.json();
       const mikeMessage: ChatMessage = {
         id: `mike-${Date.now()}`,
         role: "mike",
-        content: mikeResponse,
+        content: data.content,
       };
       onSendMessage([...updatedMessages, mikeMessage]);
+    } catch (error) {
+      console.error("Chat Error:", error);
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: "mike",
+        content: "My brain just glitched. Probably your fault. Try again.",
+      };
+      onSendMessage([...updatedMessages, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, delay);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
