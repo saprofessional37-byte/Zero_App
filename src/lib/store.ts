@@ -54,9 +54,9 @@ export function usePrisonState() {
           monthlyRunway: data.monthly_runway,
           weeklyHours: data.weekly_hours,
           skillType: data.skill_type,
-          past_attempts: data.past_attempts,
-          biggest_failure: data.biggest_failure,
-          why_now: data.why_now,
+          pastAttempts: data.past_attempts,
+          biggestFailure: data.biggest_failure,
+          whyNow: data.why_now,
           commitment: data.commitment,
         };
 
