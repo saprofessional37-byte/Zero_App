@@ -324,15 +324,22 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
       setIsJudging(true);
       setError(null);
       try {
+        const capital = typeof answers.capital_available === "object" ? answers.capital_available.value : "Unknown";
+        
         const response = await fetch('/api/judge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answer: textInput }),
+          body: JSON.stringify({ 
+            answer: textInput,
+            capitalAvailable: capital,
+            ideaTitle: "General Business",
+            ideaDescription: "Establishing viability for entry."
+          }),
         });
         const data = await response.json();
         
         if (data.verdict === 'REJECT') {
-          setError("That is not a real answer. Try again.");
+          setError(data.reason || "That is not a real answer. Try again.");
           setIsJudging(false);
           return;
         }

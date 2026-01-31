@@ -10,7 +10,7 @@ import WardenChat from "@/components/WardenChat";
 import { UserButton, SignedIn } from "@clerk/nextjs";
 
 export default function Home() {
-  const { state: cloudState, loading, setState, saveToCloud, refresh } = usePrisonState();
+  const { state: cloudState, loading, saveToCloud, refresh } = usePrisonState();
   const [localState, setLocalState] = useState<AppState | null>(null);
 
   useEffect(() => {
@@ -30,12 +30,18 @@ export default function Home() {
   }
 
   async function handleOnboardingComplete(profile: UserProfile) {
-    setLocalState((prev) => prev ? { ...prev, screen: "prison", onboardingComplete: true, userProfile: profile } : prev);
+    setLocalState((prev) => {
+      if (!prev) return null;
+      return { ...prev, screen: "prison", onboardingComplete: true, userProfile: profile };
+    });
     await saveToCloud(profile);
   }
 
   function handleRejection(message: string) {
-    setLocalState((prev) => prev ? { ...prev, rejected: true, rejectionMessage: message } : prev);
+    setLocalState((prev) => {
+      if (!prev) return null;
+      return { ...prev, rejected: true, rejectionMessage: message };
+    });
   }
 
   function handleReset() {
@@ -43,15 +49,21 @@ export default function Home() {
   }
 
   function handleGenerateIdea(idea: BusinessIdea) {
-    setLocalState((prev) => prev ? { ...prev, currentIdea: idea, chatMessages: [], executionPlan: null } : prev);
+    setLocalState((prev) => {
+      if (!prev) return null;
+      return { ...prev, currentIdea: idea, chatMessages: [], executionPlan: null };
+    });
   }
 
   function handleExecute(plan: string) {
-    setLocalState((prev) => prev ? { ...prev, currentIdea: null, executionPlan: plan, chatMessages: [] } : prev);
+    setLocalState((prev) => {
+      if (!prev) return null;
+      return { ...prev, currentIdea: null, executionPlan: plan, chatMessages: [] };
+    });
   }
 
   async function handleMurder(reason: string) {
-    if (!localState.currentIdea) return;
+    if (!localState || !localState.currentIdea) return;
 
     const killed: KilledIdea = {
       ...localState.currentIdea,
@@ -61,13 +73,16 @@ export default function Home() {
 
     const newKilledIdeas = [killed, ...localState.killedIdeas];
 
-    setLocalState((prev) => prev ? {
-      ...prev,
-      currentIdea: null,
-      executionPlan: null,
-      chatMessages: [],
-      killedIdeas: newKilledIdeas,
-    } : prev);
+    setLocalState((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        currentIdea: null,
+        executionPlan: null,
+        chatMessages: [],
+        killedIdeas: newKilledIdeas,
+      };
+    });
 
     if (localState.userProfile) {
       await saveToCloud(localState.userProfile, newKilledIdeas);
