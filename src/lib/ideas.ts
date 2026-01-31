@@ -170,7 +170,7 @@ const IDEAS: BusinessIdea[] = [
   },
 ];
 
-export function generateIdea(profile: UserProfile): BusinessIdea {
+export function generateIdea(profile: UserProfile, excludeIds: string[] = []): BusinessIdea {
   const capital = profile.capitalAvailable;
   const hours = profile.weeklyHours;
   let pool: BusinessIdea[];
@@ -192,6 +192,10 @@ export function generateIdea(profile: UserProfile): BusinessIdea {
     const serviceOnly = pool.filter((i) => i.category === "service");
     if (serviceOnly.length > 0) pool = serviceOnly;
   }
+
+  // Exclude previously shown ideas to avoid repeats
+  const fresh = pool.filter((i) => !excludeIds.includes(i.id));
+  if (fresh.length > 0) pool = fresh;
 
   const randomIndex = Math.floor(Math.random() * pool.length);
   return pool[randomIndex];

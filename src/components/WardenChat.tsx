@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { BusinessIdea, ChatMessage, UserProfile } from "@/lib/types";
 import { MIKE_INTRO } from "@/lib/mike";
-import { useAuth } from "@clerk/nextjs";
 
 interface WardenChatProps {
   idea: BusinessIdea;

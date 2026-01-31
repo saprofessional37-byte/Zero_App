@@ -27,6 +27,7 @@ export function usePrisonState() {
       return;
     }
 
+    setLoading(true);
     try {
       const token = await getToken({ template: "supabase" });
       if (!token) {

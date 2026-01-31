@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
+
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 2000;
 
 const SYSTEM_PROMPT = `
 You are Mike. You are a 45-year-old failed entrepreneur who lost $2M on three failed startups.
@@ -40,41 +44,53 @@ Mike: "No you don't. You need a customer. Sell it first, draw the logo on a napk
 
 export async function POST(req: Request) {
   try {
-    const { messages, userProfile, currentIdea } = await req.json();
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { messages, userProfile, currentIdea } = body;
+
+    if (!Array.isArray(messages)) {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
 
     // 1. Inject Context into the System Prompt
-    let prompt = SYSTEM_PROMPT
+    const prompt = SYSTEM_PROMPT
       .replace("{{CAPITAL}}", userProfile?.capitalAvailable || "Unknown")
       .replace("{{SKILL}}", userProfile?.skillType || "Unknown")
       .replace("{{IDEA_TITLE}}", currentIdea?.title || "Unknown")
       .replace("{{IDEA_DESC}}", currentIdea?.description || "Unknown");
 
-    // 2. Prepare the conversation history
-    // We put the System Prompt first, then the recent chat history
+    // 2. Prepare the conversation history — truncate to last N messages
+    const recentMessages = messages.slice(-MAX_MESSAGES);
     const conversation = [
-      { role: "system", content: prompt },
-      ...messages.map((msg: any) => ({
-        role: msg.role === "mike" ? "assistant" : "user",
-        content: msg.content,
+      { role: "system" as const, content: prompt },
+      ...recentMessages.map((msg: { role: string; content: string }) => ({
+        role: (msg.role === "mike" ? "assistant" : "user") as "assistant" | "user",
+        content: typeof msg.content === "string"
+          ? msg.content.slice(0, MAX_MESSAGE_LENGTH)
+          : "",
       })),
     ];
 
     // 3. Call Groq
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await getGroq().chat.completions.create({
       messages: conversation,
-      model: "llama-3.3-70b-versatile", // High intelligence model
-      temperature: 0.8, // Slightly higher creativity for insults
-      max_tokens: 150, // Keep it short
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.8,
+      max_tokens: 150,
     });
 
     const reply = chatCompletion.choices[0]?.message?.content || "Silence...";
 
     return NextResponse.json({ content: reply });
 
-  } catch (error: any) {
-    console.error("WARDEN ERROR:", error); // Check your server terminal when this happens!
+  } catch (error: unknown) {
+    console.error("WARDEN ERROR:", error);
     return NextResponse.json(
-      { content: "My brain glitched. Check your API Key or logs." },
+      { content: "My brain glitched. Try again." },
       { status: 500 }
     );
   }

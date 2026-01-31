@@ -329,8 +329,15 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ answer: textInput }),
         });
+
+        if (!response.ok) {
+          setError("Validation unavailable. Try again.");
+          setIsJudging(false);
+          return;
+        }
+
         const data = await response.json();
-        
+
         if (data.verdict === 'REJECT') {
           setError("That is not a real answer. Try again.");
           setIsJudging(false);
@@ -338,6 +345,9 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
         }
       } catch (err) {
         console.error("Judging failed:", err);
+        setError("Connection error. Try again.");
+        setIsJudging(false);
+        return;
       } finally {
         setIsJudging(false);
       }
@@ -360,7 +370,7 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="max-w-lg w-full border-2 border-jailbar-grey p-8 animate-fade-in">
           <div className="text-execute-green text-xs mb-4 tracking-widest">
-            // ACCESS GRANTED
+            {"// ACCESS GRANTED"}
           </div>
           <h1 className="text-2xl text-execute-green font-bold mb-6 tracking-wider">
             ADMITTED
@@ -416,7 +426,7 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
         {/* Question */}
         <div className="border border-jailbar-grey p-6 mb-6 animate-fade-in" key={currentStep}>
           <div className="text-text-grey text-xs mb-4 tracking-widest">
-            // INTERROGATION
+            {"// INTERROGATION"}
           </div>
           <h2 className="text-xl font-bold text-text-white mb-2">
             {question.question}
@@ -477,7 +487,7 @@ export default function Onboarding({ onComplete, onReject }: OnboardingProps) {
 
         {/* Footer */}
         <div className="text-center text-accent-dim text-xs tracking-wide">
-          ZERO does not store your data. We don&apos;t care about your data.
+          Your answers shape your cell. Nothing more.
           <br />
           We care about whether you execute.
         </div>

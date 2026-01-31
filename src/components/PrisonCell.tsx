@@ -7,6 +7,7 @@ import { generateIdea } from "@/lib/ideas";
 interface PrisonCellProps {
   userProfile: UserProfile;
   currentIdea: BusinessIdea | null;
+  seenIdeaIds: string[];
   onGenerateIdea: (idea: BusinessIdea) => void;
   onExecute: (plan: string) => void;
   onMurder: (reason: string) => void;
@@ -18,6 +19,7 @@ type CellAction = null | "execute" | "murder";
 export default function PrisonCell({
   userProfile,
   currentIdea,
+  seenIdeaIds,
   onGenerateIdea,
   onExecute,
   onMurder,
@@ -28,7 +30,7 @@ export default function PrisonCell({
   const [error, setError] = useState("");
 
   function handleGenerate() {
-    const idea = generateIdea(userProfile);
+    const idea = generateIdea(userProfile, seenIdeaIds);
     onGenerateIdea(idea);
     setActiveAction(null);
     setInputText("");
