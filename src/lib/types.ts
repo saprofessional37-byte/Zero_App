@@ -20,12 +20,13 @@ export interface BusinessIdea {
   category: "service" | "low-cost" | "medium";
 }
 
-export interface KilledIdea extends BusinessIdea {
-  killedAt: string;
-  reason: string;
+export interface KilledIdea {
+  id: string;
+  title: string;
+  category: "service" | "low-cost" | "medium";
 }
 
-export type Screen = "onboarding" | "prison" | "warden" | "settings" | "history";
+export type Screen = "onboarding" | "prison" | "warden" | "settings";
 
 export interface AppState {
   screen: Screen;

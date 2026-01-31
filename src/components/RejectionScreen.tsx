@@ -2,12 +2,10 @@
 
 interface RejectionScreenProps {
   message: string;
-  onReset: () => void;
 }
 
 export default function RejectionScreen({
   message,
-  onReset,
 }: RejectionScreenProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
@@ -27,13 +25,6 @@ export default function RejectionScreen({
           </p>
         </div>
 
-        {/* Try again */}
-        <button
-          onClick={onReset}
-          className="mt-8 text-accent-dim text-xs tracking-wider hover:text-text-grey transition-colors uppercase"
-        >
-          [ TRY AGAIN ]
-        </button>
       </div>
     </div>
   );

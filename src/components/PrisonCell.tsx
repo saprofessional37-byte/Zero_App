@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { BusinessIdea, UserProfile } from "@/lib/types";
+import { BusinessIdea, UserProfile, KilledIdea } from "@/lib/types";
 import { generateIdea } from "@/lib/ideas";
 
 interface PrisonCellProps {
   userProfile: UserProfile;
   currentIdea: BusinessIdea | null;
+  killedIdeas: KilledIdea[];
   onGenerateIdea: (idea: BusinessIdea) => void;
   onExecute: (plan: string) => void;
   onMurder: (reason: string) => void;
@@ -18,6 +19,7 @@ type CellAction = null | "execute" | "murder";
 export default function PrisonCell({
   userProfile,
   currentIdea,
+  killedIdeas,
   onGenerateIdea,
   onExecute,
   onMurder,
@@ -28,7 +30,7 @@ export default function PrisonCell({
   const [error, setError] = useState("");
 
   function handleGenerate() {
-    const idea = generateIdea(userProfile);
+    const idea = generateIdea(userProfile, killedIdeas);
     onGenerateIdea(idea);
     setActiveAction(null);
     setInputText("");

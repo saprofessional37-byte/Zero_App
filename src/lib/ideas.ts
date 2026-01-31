@@ -1,4 +1,4 @@
-import { BusinessIdea, UserProfile } from "./types";
+import { BusinessIdea, UserProfile, KilledIdea } from "./types";
 
 const IDEAS: BusinessIdea[] = [
   // SERVICE IDEAS ($0 capital)
@@ -170,27 +170,33 @@ const IDEAS: BusinessIdea[] = [
   },
 ];
 
-export function generateIdea(profile: UserProfile): BusinessIdea {
+export function generateIdea(profile: UserProfile, killedIdeas: KilledIdea[] = []): BusinessIdea {
   const capital = profile.capitalAvailable;
   const hours = profile.weeklyHours;
+  const killedIds = new Set(killedIdeas.map(k => k.id));
   let pool: BusinessIdea[];
 
   // Filter by capital
   if (capital === "0") {
-    pool = IDEAS.filter((i) => i.category === "service");
+    pool = IDEAS.filter((i) => i.category === "service" && !killedIds.has(i.id));
   } else if (capital === "100") {
     pool = IDEAS.filter(
-      (i) => i.category === "service" || i.category === "low-cost"
+      (i) => (i.category === "service" || i.category === "low-cost") && !killedIds.has(i.id)
     );
   } else {
     // $500, $1000, $5000 - all ideas available
-    pool = IDEAS;
+    pool = IDEAS.filter((i) => !killedIds.has(i.id));
   }
 
   // For very limited time, prefer simpler service-based ideas
   if (hours === "<5") {
     const serviceOnly = pool.filter((i) => i.category === "service");
     if (serviceOnly.length > 0) pool = serviceOnly;
+  }
+
+  // If no pool available (all ideas killed), return first available from full set
+  if (pool.length === 0) {
+    return IDEAS[0];
   }
 
   const randomIndex = Math.floor(Math.random() * pool.length);
