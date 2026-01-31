@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { createSupabaseClient } from "./supabaseClient";
-import { UserProfile, AppState } from "./types";
+import { UserProfile, AppState, BusinessIdea, KilledIdea } from "./types";
 
 const INITIAL_STATE: AppState = {
   screen: "onboarding",
@@ -12,6 +12,7 @@ const INITIAL_STATE: AppState = {
   rejectionMessage: "",
   userProfile: null,
   currentIdea: null,
+  killedIdeas: [],
   executionPlan: null,
   chatMessages: [],
 };
@@ -30,7 +31,6 @@ export function usePrisonState() {
     try {
       const token = await getToken({ template: "supabase" });
       if (!token) {
-        console.warn("No Supabase token found. Ensure JWT template is configured in Clerk Dashboard.");
         setLoading(false);
         return;
       }
@@ -45,7 +45,6 @@ export function usePrisonState() {
       if (error && error.code !== "PGRST116") {
         console.error("Error fetching state:", error);
       } else if (data) {
-        // Map snake_case from DB to camelCase for AppState
         const profile: UserProfile = {
           ageBracket: data.age_bracket,
           locationType: data.location_type,
@@ -63,6 +62,7 @@ export function usePrisonState() {
         setState(prev => ({
           ...prev,
           userProfile: profile,
+          killedIdeas: data.killed_ideas || [],
           onboardingComplete: true,
           screen: "prison",
         }));
@@ -78,7 +78,7 @@ export function usePrisonState() {
     fetchState();
   }, [fetchState]);
 
-  const saveToCloud = async (newProfile: UserProfile) => {
+  const saveToCloud = async (newProfile: UserProfile, killedIdeas?: KilledIdea[]) => {
     if (!userId) return;
 
     try {
@@ -100,6 +100,7 @@ export function usePrisonState() {
         biggest_failure: newProfile.biggestFailure,
         why_now: newProfile.whyNow,
         commitment: newProfile.commitment,
+        killed_ideas: killedIdeas || state.killedIdeas,
         updated_at: new Date().toISOString(),
       };
 
@@ -112,8 +113,8 @@ export function usePrisonState() {
       setState(prev => ({
         ...prev,
         userProfile: newProfile,
+        killedIdeas: killedIdeas || prev.killedIdeas,
         onboardingComplete: true,
-        screen: "prison",
       }));
     } catch (err) {
       console.error("Failed to save state:", err);
@@ -122,6 +123,7 @@ export function usePrisonState() {
 
   return {
     state,
+    setState,
     loading,
     saveToCloud,
     refresh: fetchState

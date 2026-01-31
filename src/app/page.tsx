@@ -1,25 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AppState, BusinessIdea, ChatMessage, UserProfile } from "@/lib/types";
+import { AppState, BusinessIdea, ChatMessage, UserProfile, KilledIdea } from "@/lib/types";
 import { usePrisonState } from "@/lib/store";
 import Onboarding from "@/components/Onboarding";
 import RejectionScreen from "@/components/RejectionScreen";
 import PrisonCell from "@/components/PrisonCell";
 import WardenChat from "@/components/WardenChat";
+import { UserButton, SignedIn } from "@clerk/nextjs";
 
 export default function Home() {
-  const { state: cloudState, loading, saveToCloud, refresh } = usePrisonState();
+  const { state: cloudState, loading, setState, saveToCloud, refresh } = usePrisonState();
   const [localState, setLocalState] = useState<AppState | null>(null);
 
-  // Sync cloud state to local state
   useEffect(() => {
     if (!loading && cloudState) {
       setLocalState(cloudState);
     }
   }, [cloudState, loading]);
 
-  // Loading state (before hydration or while cloud fetching)
   if (loading || !localState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -30,143 +29,139 @@ export default function Home() {
     );
   }
 
-  // Handle onboarding completion
   async function handleOnboardingComplete(profile: UserProfile) {
-    // Optimistically update local state to prevent refresh/loss
-    setLocalState((prev) =>
-      prev
-        ? {
-            ...prev,
-            screen: "prison",
-            onboardingComplete: true,
-            userProfile: profile,
-          }
-        : prev
-    );
-    
-    // Save to cloud in background
+    setLocalState((prev) => prev ? { ...prev, screen: "prison", onboardingComplete: true, userProfile: profile } : prev);
     await saveToCloud(profile);
   }
 
-  // Handle rejection
   function handleRejection(message: string) {
-    setLocalState((prev) =>
-      prev
-        ? {
-            ...prev,
-            rejected: true,
-            rejectionMessage: message,
-          }
-        : prev
-    );
+    setLocalState((prev) => prev ? { ...prev, rejected: true, rejectionMessage: message } : prev);
   }
 
-  // Handle reset (try again after rejection)
   function handleReset() {
-    // For now, since we only store userProfile in cloud, 
-    // a reset just reloads the current cloud state
     refresh();
   }
 
-  // Handle idea generation
   function handleGenerateIdea(idea: BusinessIdea) {
-    setLocalState((prev) =>
-      prev
-        ? {
-            ...prev,
-            currentIdea: idea,
-            chatMessages: [],
-            executionPlan: null,
-          }
-        : prev
-    );
+    setLocalState((prev) => prev ? { ...prev, currentIdea: idea, chatMessages: [], executionPlan: null } : prev);
   }
 
-  // Handle execute
   function handleExecute(plan: string) {
-    setLocalState((prev) =>
-      prev
-        ? {
-            ...prev,
-            currentIdea: null,
-            executionPlan: plan,
-            chatMessages: [],
-          }
-        : prev
+    setLocalState((prev) => prev ? { ...prev, currentIdea: null, executionPlan: plan, chatMessages: [] } : prev);
+  }
+
+  async function handleMurder(reason: string) {
+    if (!localState.currentIdea) return;
+
+    const killed: KilledIdea = {
+      ...localState.currentIdea,
+      killedAt: new Date().toISOString(),
+      reason,
+    };
+
+    const newKilledIdeas = [killed, ...localState.killedIdeas];
+
+    setLocalState((prev) => prev ? {
+      ...prev,
+      currentIdea: null,
+      executionPlan: null,
+      chatMessages: [],
+      killedIdeas: newKilledIdeas,
+    } : prev);
+
+    if (localState.userProfile) {
+      await saveToCloud(localState.userProfile, newKilledIdeas);
+    }
+  }
+
+  if (localState.screen === "history") {
+    return (
+      <div className="min-h-screen p-8 max-w-2xl mx-auto">
+        <header className="flex justify-between items-center mb-8 border-b border-jailbar-grey pb-4">
+          <h1 className="text-2xl font-bold tracking-widest text-text-white">HISTORY</h1>
+          <button onClick={() => setLocalState(p => p ? { ...p, screen: "prison" } : p)} className="text-text-grey hover:text-white text-sm">BACK</button>
+        </header>
+        <div className="space-y-6">
+          {localState.killedIdeas.length === 0 ? (
+            <p className="text-text-grey text-center">No ideas killed yet. Get to work.</p>
+          ) : (
+            localState.killedIdeas.map((idea, i) => (
+              <div key={i} className="border border-danger-red/30 p-4 bg-danger-red/5">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-text-white font-bold">{idea.title}</h3>
+                  <span className="text-[10px] text-text-grey uppercase">{new Date(idea.killedAt).toLocaleDateString()}</span>
+                </div>
+                <p className="text-text-grey text-xs mb-3 italic">"{idea.reason}"</p>
+                <p className="text-text-light text-xs">{idea.description}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     );
   }
 
-  // Handle murder
-  function handleMurder(_reason: string) {
-    setLocalState((prev) =>
-      prev
-        ? {
-            ...prev,
-            currentIdea: null,
-            executionPlan: null,
-            chatMessages: [],
-          }
-        : prev
+  if (localState.screen === "settings") {
+    return (
+      <div className="min-h-screen p-8 max-w-2xl mx-auto">
+        <header className="flex justify-between items-center mb-8 border-b border-jailbar-grey pb-4">
+          <h1 className="text-2xl font-bold tracking-widest text-text-white">SETTINGS</h1>
+          <button onClick={() => setLocalState(p => p ? { ...p, screen: "prison" } : p)} className="text-text-grey hover:text-white text-sm">BACK</button>
+        </header>
+        <div className="space-y-8">
+          <section>
+            <h2 className="text-xs text-text-grey uppercase tracking-widest mb-4">Account</h2>
+            <div className="flex items-center gap-4 border border-jailbar-grey p-4">
+              <SignedIn><UserButton /></SignedIn>
+              <div>
+                <p className="text-text-white text-sm">Active Session</p>
+                <p className="text-text-grey text-xs">Identity verified via Clerk</p>
+              </div>
+            </div>
+          </section>
+          <section>
+            <h2 className="text-xs text-text-grey uppercase tracking-widest mb-4">Reset</h2>
+            <button onClick={() => { if(confirm("This will erase your progress. Continue?")) handleReset(); }} className="px-6 py-2 border border-danger-red text-danger-red hover:bg-danger-red hover:text-white transition-all text-xs uppercase tracking-widest">Wipe Data</button>
+          </section>
+        </div>
+      </div>
     );
   }
 
-  // Navigate to warden chat
-  function handleTalkToWarden() {
-    setLocalState((prev) => (prev ? { ...prev, screen: "warden" } : prev));
-  }
-
-  // Navigate back from warden chat
-  function handleBackFromWarden() {
-    setLocalState((prev) => (prev ? { ...prev, screen: "prison" } : prev));
-  }
-
-  // Update chat messages
-  function handleChatMessages(messages: ChatMessage[]) {
-    setLocalState((prev) => (prev ? { ...prev, chatMessages: messages } : prev));
-  }
-
-  // Rejection screen
   if (localState.rejected) {
-    return (
-      <RejectionScreen
-        message={localState.rejectionMessage}
-        onReset={handleReset}
-      />
-    );
+    return <RejectionScreen message={localState.rejectionMessage} onReset={handleReset} />;
   }
 
-  // Onboarding
   if (!localState.onboardingComplete) {
-    return (
-      <Onboarding
-        onComplete={handleOnboardingComplete}
-        onReject={handleRejection}
-      />
-    );
+    return <Onboarding onComplete={handleOnboardingComplete} onReject={handleRejection} />;
   }
 
-  // Warden Chat
   if (localState.screen === "warden" && localState.currentIdea) {
     return (
       <WardenChat
         idea={localState.currentIdea}
         messages={localState.chatMessages}
         userProfile={localState.userProfile!}
-        onSendMessage={handleChatMessages}
-        onBack={handleBackFromWarden}
+        onSendMessage={(msgs) => setLocalState(p => p ? { ...p, chatMessages: msgs } : p)}
+        onBack={() => setLocalState(p => p ? { ...p, screen: "prison" } : p)}
       />
     );
   }
 
-  // Prison Cell (main dashboard)
   return (
-    <PrisonCell
-      userProfile={localState.userProfile!}
-      currentIdea={localState.currentIdea}
-      onGenerateIdea={handleGenerateIdea}
-      onExecute={handleExecute}
-      onMurder={handleMurder}
-      onTalkToWarden={handleTalkToWarden}
-    />
+    <div className="relative">
+      <nav className="absolute top-4 left-4 flex gap-4 z-10">
+        <button onClick={() => setLocalState(p => p ? { ...p, screen: "history" } : p)} className="text-[10px] text-text-grey hover:text-white tracking-widest uppercase border border-jailbar-grey px-2 py-1">History</button>
+        <button onClick={() => setLocalState(p => p ? { ...p, screen: "settings" } : p)} className="text-[10px] text-text-grey hover:text-white tracking-widest uppercase border border-jailbar-grey px-2 py-1">Settings</button>
+      </nav>
+      <PrisonCell
+        userProfile={localState.userProfile!}
+        currentIdea={localState.currentIdea}
+        onGenerateIdea={handleGenerateIdea}
+        onExecute={handleExecute}
+        onMurder={handleMurder}
+        onTalkToWarden={() => setLocalState(p => p ? { ...p, screen: "warden" } : p)}
+      />
+    </div>
   );
 }

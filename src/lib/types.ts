@@ -20,7 +20,12 @@ export interface BusinessIdea {
   category: "service" | "low-cost" | "medium";
 }
 
-export type Screen = "onboarding" | "prison" | "warden";
+export interface KilledIdea extends BusinessIdea {
+  killedAt: string;
+  reason: string;
+}
+
+export type Screen = "onboarding" | "prison" | "warden" | "settings" | "history";
 
 export interface AppState {
   screen: Screen;
@@ -29,6 +34,7 @@ export interface AppState {
   rejectionMessage: string;
   userProfile: UserProfile | null;
   currentIdea: BusinessIdea | null;
+  killedIdeas: KilledIdea[];
   executionPlan: string | null;
   chatMessages: ChatMessage[];
 }
